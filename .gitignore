@@ -5,3 +5,5 @@ __pycache__/
 temp_frames/
 *.log
 config
+build
+dist
