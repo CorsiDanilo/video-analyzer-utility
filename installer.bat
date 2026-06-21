@@ -20,10 +20,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Copy config and settings folders to the distribution folder
+REM Copy settings folder to the distribution folder
 echo Copia delle cartelle di configurazione...
-xcopy /E /I /Y "config" "dist\VideoAnalyzer\config"
 xcopy /E /I /Y "settings" "dist\VideoAnalyzer\settings"
+if exist "secrets" xcopy /E /I /Y "secrets" "dist\VideoAnalyzer\secrets"
 
 echo.
 echo 🎉 Operazione completata con successo!

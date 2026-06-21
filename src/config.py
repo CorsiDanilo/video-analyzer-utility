@@ -24,7 +24,7 @@ def get_gemini_api_key():
     if env_key:
         return env_key
     try:
-        with open("config/gemini.yaml", "r", encoding="utf-8") as ymlfile:
+        with open("secrets/gemini.yaml", "r", encoding="utf-8") as ymlfile:
             gemini = yaml.safe_load(ymlfile)
         if isinstance(gemini, dict):
             key = gemini.get("gemini_api_key")
@@ -82,7 +82,7 @@ def get_translation(key):
     
     if _locales is None:
         try:
-            with open("config/locales.yaml", "r", encoding="utf-8") as f:
+            with open("settings/locales.yaml", "r", encoding="utf-8") as f:
                 _locales = yaml.safe_load(f) or {}
         except Exception as e:
             logging.error(f"Error loading locales: {e}")

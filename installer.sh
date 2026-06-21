@@ -20,11 +20,13 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Copy config and settings folders to the distribution folder
+# Copy settings folder to the distribution folder
 echo "Copia delle cartelle di configurazione..."
 mkdir -p dist/VideoAnalyzer
-cp -r config dist/VideoAnalyzer/config
 cp -r settings dist/VideoAnalyzer/settings
+if [ -d "secrets" ]; then
+    cp -r secrets dist/VideoAnalyzer/secrets
+fi
 
 echo ""
 echo "🎉 Operazione completata con successo!"

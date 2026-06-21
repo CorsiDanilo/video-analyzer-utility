@@ -4,6 +4,6 @@ __pycache__/
 .env
 temp_frames/
 *.log
-config
+secrets
 build
 dist
