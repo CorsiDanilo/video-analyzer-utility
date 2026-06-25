@@ -10,13 +10,14 @@ from .llm_vision import (
     analyze_frames_ollama,
     analyze_frames_lmstudio,
     list_ollama_models,
-    list_lmstudio_models
+    list_lmstudio_models,
+    get_sorted_gemini_models,
+    query_gemini
 )
 from .config import (
     get_gemini_api_key,
     setup_logging,
-    _,
-    GEMINI_VISION_MODELS
+    _
 )
 
 def browse_local_files():
@@ -93,10 +94,17 @@ def save_extracted_text(extracted_text, file_paths_text=""):
 def notify_copy():
     gr.Info(_("copy_success"))
 
+def preset_query_summary():
+    return _("preset_summary_val")
+
+def preset_query_todo():
+    return _("preset_todo_val")
+
+
 def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames):
     """Process video files based on provider."""
     if not file_paths_text or not file_paths_text.strip():
-        yield _("proc_no_files"), gr.update(visible=False)
+        yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False)
         return
 
     raw_paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
@@ -107,19 +115,19 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
         filename = os.path.basename(file_path)
         header = f"### File {index}/{total_files}: {filename}\n\n"
 
-        yield session_text + header + _("proc_processing"), gr.update(visible=False)
+        yield session_text + header + _("proc_processing"), gr.update(visible=False), gr.update(visible=False)
 
         try:
             if not os.path.isfile(file_path):
                 logging.error(f"File not found: {file_path}")
                 result = _("proc_file_not_found").format(file_path)
-                yield session_text + header + result, gr.update(visible=False)
+                yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
                 session_text += header + result + "\n\n---\n\n"
                 continue
 
-            if provider == "Gemini":
+            if provider == "Google":
                 msg = _("uploading_to_gemini")
-                yield session_text + header + msg, gr.update(visible=False)
+                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
                 
                 result = analyze_video_gemini(file_path, gemini_model, response_language)
             else:
@@ -128,14 +136,14 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                     msg = _("frame_extraction_info").format(frame_interval, max_frames)
                 else:
                     msg = _("frame_extraction_info_no_limit").format(frame_interval)
-                yield session_text + header + msg, gr.update(visible=False)
+                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
                 
                 frames = extract_frames(file_path, interval=int(frame_interval), max_frames=int(max_frames or 0))
                 if not frames:
                     result = _("proc_error").format("No frames extracted.")
                 else:
                     msg = _("frame_extraction_done").format(len(frames), provider)
-                    yield session_text + header + msg, gr.update(visible=False)
+                    yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
                     
                     model_name = ollama_model if provider == "Ollama" else lmstudio_model
                     if provider == "Ollama":
@@ -161,14 +169,15 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
             logging.error(f"Error processing {file_path}: {e}", exc_info=True)
             result = _("proc_error").format(str(e))
 
-        yield session_text + header + result, gr.update(visible=False)
+        yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
         session_text += header + result + "\n\n---\n\n"
 
     session_text = session_text.strip()
     if session_text.endswith("---"):
         session_text = session_text[:-3].strip()
 
-    yield session_text, gr.update(visible=True)
+    yield session_text, gr.update(visible=True), gr.update(visible=True)
+
 
 
 def reset_fields():
@@ -176,7 +185,11 @@ def reset_fields():
         "",                          
         _("output_placeholder"),     
         gr.update(visible=False),    
+        "",                          # user_query
+        _("response_placeholder"),   # ai_response
+        gr.update(visible=False),    # submit_query_button
     )
+
 
 def quit_app():
     try:
@@ -205,7 +218,10 @@ custom_css = """
 
 def create_ui():
     setup_logging()
-    has_gemini = get_gemini_api_key() is not None
+    
+    gemini_api_key = get_gemini_api_key()
+    gemini_models = get_sorted_gemini_models(gemini_api_key)
+    has_gemini = len(gemini_models) > 0
 
     with gr.Blocks(title="Video Analyzer Utility") as demo:
         title_markdown = gr.Markdown(_("title"))
@@ -225,15 +241,38 @@ def create_ui():
                 value="Italiano",
                 label=_("response_language_label"),
             )
+            
+            provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
             provider_radio = gr.Radio(
-                choices=["Gemini", "Ollama", "LM Studio"],
-                value="Gemini" if has_gemini else "Ollama",
+                choices=provider_choices,
+                value="Google" if has_gemini else "Ollama",
                 label=_("provider_label"),
             )
 
-            gemini_model = gr.Radio(
-                choices=GEMINI_VISION_MODELS,
-                value=GEMINI_VISION_MODELS[0],
+            google_brand_radio = gr.Radio(
+                choices=["Gemini", "Gemma"],
+                value="Gemini",
+                label=_("model_family_label"),
+                visible=has_gemini,
+            )
+
+
+            initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
+            if not initial_filtered_models and gemini_models:
+                initial_filtered_models = [m for m in gemini_models if "gemma" in m.lower()]
+
+            default_val = None
+            for m in initial_filtered_models:
+                if "gemini-flash-latest" in m.lower():
+                    default_val = m
+                    break
+            if not default_val and initial_filtered_models:
+                default_val = initial_filtered_models[0]
+
+            gemini_model = gr.Dropdown(
+                choices=initial_filtered_models,
+                value=default_val,
+                allow_custom_value=True,
                 label=_("gemini_model_label"),
                 visible=has_gemini,
             )
@@ -281,19 +320,92 @@ def create_ui():
             )
         save_button = gr.Button(_("save_btn"), variant="primary", visible=False)
 
+        # ── AI Assistant section ──────────────────────────────────
+        assistant_accordion = gr.Accordion(_("assistant_accordion"), open=True)
+        with assistant_accordion:
+            # Provider Radio — Google only if API key and models are available
+            assist_provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
+            assist_provider = gr.Radio(
+                choices=assist_provider_choices,
+                value="Google" if has_gemini else "Ollama",
+                label=_("assist_provider_label"),
+            )
+
+            assist_google_brand_radio = gr.Radio(
+                choices=["Gemini", "Gemma"],
+                value="Gemini",
+                label=_("model_family_label"),
+                visible=has_gemini,
+            )
+
+            initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
+            if not initial_filtered_models and gemini_models:
+                initial_filtered_models = [m for m in gemini_models if "gemma" in m.lower()]
+
+            default_val = None
+            for m in initial_filtered_models:
+                if "gemini-flash-latest" in m.lower():
+                    default_val = m
+                    break
+            if not default_val and initial_filtered_models:
+                default_val = initial_filtered_models[0]
+
+            assist_gemini_model = gr.Dropdown(
+                choices=initial_filtered_models,
+                value=default_val,
+                allow_custom_value=True,
+                label=_("gemini_model_label"),
+                visible=has_gemini,
+            )
+
+            try:
+                _ollama_init = list_ollama_models() if not has_gemini else []
+            except Exception:
+                _ollama_init = []
+            _ollama_val = _ollama_init[0] if _ollama_init else ""
+
+            assist_ollama_model = gr.Dropdown(
+                choices=_ollama_init,
+                value=_ollama_val,
+                allow_custom_value=True,
+                label=_("ollama_model_label"),
+                visible=not has_gemini,
+            )
+
+            assist_lmstudio_model = gr.Dropdown(
+                choices=[],
+                value="",
+                allow_custom_value=True,
+                label=_("lmstudio_model_label"),
+                visible=False,
+            )
+
+            with gr.Row():
+                preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
+                preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
+
+            user_query = gr.Textbox(label=_("enter_query_label"))
+            submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+
+        with gr.Accordion(_("ai_response_accordion")):
+            copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
+            ai_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
+
         with gr.Row():
             reset_button = gr.Button(_("reset_btn"), variant="secondary")
             quit_button = gr.Button(_("quit_btn"), variant="stop")
+
 
         # EVENT HANDLERS
         browse_button.click(fn=browse_local_files, inputs=[], outputs=[file_path_input])
 
         def _provider_change(p):
             no_models = _("no_models_found")
-            is_gemini = str(p).lower().startswith("g")
+            is_google = str(p).lower().startswith("g")
             
-            if is_gemini:
+            if is_google:
                 return (
+                    gr.update(visible=True),
                     gr.update(visible=True),
                     gr.update(visible=False),
                     gr.update(visible=False),
@@ -305,6 +417,7 @@ def create_ui():
                 val = models[0] if models and models[0] != no_models else ""
                 return (
                     gr.update(visible=False),
+                    gr.update(visible=False),
                     gr.update(visible=True, choices=models, value=val),
                     gr.update(visible=False),
                     gr.update(visible=True)
@@ -315,6 +428,7 @@ def create_ui():
             return (
                 gr.update(visible=False),
                 gr.update(visible=False),
+                gr.update(visible=False),
                 gr.update(visible=True, choices=lm_models, value=lm_val),
                 gr.update(visible=True)
             )
@@ -322,7 +436,25 @@ def create_ui():
         provider_radio.change(
             fn=_provider_change,
             inputs=[provider_radio],
-            outputs=[gemini_model, ollama_model, lmstudio_model, extraction_group],
+            outputs=[google_brand_radio, gemini_model, ollama_model, lmstudio_model, extraction_group],
+        )
+
+        def _update_google_models(brand):
+            filtered = [m for m in gemini_models if brand.lower() in m.lower()]
+            val = None
+            if brand.lower() == "gemini":
+                for m in filtered:
+                    if "gemini-flash-latest" in m.lower():
+                        val = m
+                        break
+            if not val and filtered:
+                val = filtered[0]
+            return gr.update(choices=filtered, value=val)
+
+        google_brand_radio.change(
+            fn=_update_google_models,
+            inputs=[google_brand_radio],
+            outputs=[gemini_model],
         )
 
         def _refresh_models(provider):
@@ -355,7 +487,7 @@ def create_ui():
                 frame_interval,
                 max_frames
             ],
-            outputs=[output_text, save_button],
+            outputs=[output_text, save_button, submit_query_button],
         )
 
         save_button.click(fn=save_extracted_text, inputs=[output_text, file_path_input], outputs=[])
@@ -365,12 +497,95 @@ def create_ui():
             fn=notify_copy, inputs=[], outputs=[]
         ).then(fn=None, inputs=[output_text], js=js_copy_text)
 
+        # Assistant provider change
+        def _assist_provider_change(p):
+            no_models = _("no_models_found")
+            if str(p).lower().startswith("g"):
+                return (
+                    gr.update(visible=True),
+                    gr.update(visible=True),
+                    gr.update(visible=False, choices=[], value=""),
+                    gr.update(visible=False, choices=[], value=""),
+                )
+            if str(p).lower().startswith("olla"):
+                models = list_ollama_models() or [no_models]
+                val = models[0] if models and models[0] != no_models else ""
+                return (
+                    gr.update(visible=False),
+                    gr.update(visible=False),
+                    gr.update(visible=True, choices=models, value=val),
+                    gr.update(visible=False, choices=[], value=""),
+                )
+            lm_models = list_lmstudio_models() or [no_models]
+            lm_val = lm_models[0] if lm_models and lm_models[0] != no_models else ""
+            return (
+                gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(visible=False, choices=[], value=""),
+                gr.update(visible=True, choices=lm_models, value=lm_val),
+            )
+
+        assist_provider.change(
+            fn=_assist_provider_change,
+            inputs=[assist_provider],
+            outputs=[assist_google_brand_radio, assist_gemini_model, assist_ollama_model, assist_lmstudio_model],
+        )
+
+        def _update_assist_google_models(brand):
+            filtered = [m for m in gemini_models if brand.lower() in m.lower()]
+            val = None
+            if brand.lower() == "gemini":
+                for m in filtered:
+                    if "gemini-flash-latest" in m.lower():
+                        val = m
+                        break
+            if not val and filtered:
+                val = filtered[0]
+            return gr.update(choices=filtered, value=val)
+
+        assist_google_brand_radio.change(
+            fn=_update_assist_google_models,
+            inputs=[assist_google_brand_radio],
+            outputs=[assist_gemini_model],
+        )
+
+        # Preset query buttons
+        preset_summary_button.click(fn=preset_query_summary, inputs=[], outputs=[user_query])
+        preset_todo_button.click(fn=preset_query_todo, inputs=[], outputs=[user_query])
+
+        # Submit query to AI (streaming)
+        submit_query_button.click(
+            fn=query_gemini,
+            inputs=[
+                user_query,
+                output_text,
+                assist_gemini_model,
+                assist_provider,
+                assist_ollama_model,
+                assist_lmstudio_model,
+            ],
+            outputs=[ai_response],
+            stream_every=0.05,
+        )
+
+        copy_response_button.click(
+            fn=notify_copy, inputs=[], outputs=[]
+        ).then(fn=None, inputs=[ai_response], js=js_copy_text)
+
         reset_button.click(
             fn=reset_fields,
             inputs=[],
-            outputs=[file_path_input, output_text, save_button],
+            outputs=[
+                file_path_input,
+                output_text,
+                save_button,
+                user_query,
+                ai_response,
+                submit_query_button,
+            ],
         )
 
         quit_button.click(fn=quit_app, inputs=[], outputs=[])
 
     return demo
+

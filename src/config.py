@@ -58,11 +58,8 @@ OLLAMA_ENDPOINT = get_ollama_endpoint()
 LMSTUDIO_ENDPOINT = get_lmstudio_endpoint()
 
 # Default models
-DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
 DEFAULT_OLLAMA_MODEL = "llava:latest"
 DEFAULT_LMSTUDIO_MODEL = "local-model"
-
-GEMINI_VISION_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 # Localization Translators
 _locales = None

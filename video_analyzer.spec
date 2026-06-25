@@ -38,7 +38,7 @@ for pkg in packages_to_collect:
             pass
 
 a = Analysis(
-    ['main.py'],
+    ['app_main.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,

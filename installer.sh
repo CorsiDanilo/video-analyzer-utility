@@ -7,21 +7,21 @@ VENV_DIR=".venv"
 source "$VENV_DIR/bin/activate"
 
 # Install PyInstaller if not present
-echo "Installazione di PyInstaller..."
+echo "Installing PyInstaller..."
 pip install pyinstaller
 
 # Run PyInstaller with the spec file
-echo "Avvio di PyInstaller..."
+echo "Running PyInstaller..."
 pyinstaller --noconfirm video_analyzer.spec
 
 # Verify if PyInstaller completed successfully
 if [ $? -ne 0 ]; then
-    echo "[ERRORE] Errore durante la creazione dell'eseguibile."
+    echo "[ERROR] Error occurred during executable creation."
     exit 1
 fi
 
 # Copy settings folder to the distribution folder
-echo "Copia delle cartelle di configurazione..."
+echo "Copying configuration folders..."
 mkdir -p dist/VideoAnalyzer
 cp -r settings dist/VideoAnalyzer/settings
 if [ -d "secrets" ]; then
@@ -29,6 +29,7 @@ if [ -d "secrets" ]; then
 fi
 
 echo ""
-echo "🎉 Operazione completata con successo!"
-echo "L'eseguibile si trova in: dist/VideoAnalyzer/VideoAnalyzer"
+echo "🎉 Operation completed successfully!"
+echo "The executable is located in: dist/VideoAnalyzer/VideoAnalyzer"
 echo ""
+
