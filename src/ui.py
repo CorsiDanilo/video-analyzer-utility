@@ -122,10 +122,13 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                 combined_text += f"\n\n{result}\n\n---\n\n"
             else:
                 # Ollama or LM Studio -> need to extract frames
-                combined_text += _("frame_extraction_info").format(frame_interval, max_frames) + "\n"
+                if max_frames and int(max_frames) > 0:
+                    combined_text += _("frame_extraction_info").format(frame_interval, max_frames) + "\n"
+                else:
+                    combined_text += _("frame_extraction_info_no_limit").format(frame_interval) + "\n"
                 yield combined_text.strip(), gr.update(visible=False)
                 
-                frames = extract_frames(file_path, interval=int(frame_interval), max_frames=int(max_frames))
+                frames = extract_frames(file_path, interval=int(frame_interval), max_frames=int(max_frames or 0))
                 if not frames:
                     combined_text += _("proc_error").format("No frames extracted.") + "\n\n---\n\n"
                     continue
@@ -258,8 +261,8 @@ def create_ui():
             with gr.Group(visible=not has_gemini) as extraction_group:
                 gr.Markdown("**Frame Extraction Settings** (For local models)")
                 with gr.Row():
-                    frame_interval = gr.Number(value=5, label=_("frame_interval_label"), precision=0, minimum=1)
-                    max_frames = gr.Number(value=20, label=_("max_frames_label"), precision=0, minimum=1, maximum=100)
+                    frame_interval = gr.Number(value=2, label=_("frame_interval_label"), precision=0, minimum=1)
+                    max_frames = gr.Number(value=0, label=_("max_frames_label"), precision=0, minimum=0)
 
         process_btn = gr.Button(_("process_btn"), variant="primary")
 

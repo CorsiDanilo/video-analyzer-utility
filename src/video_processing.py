@@ -25,11 +25,11 @@ def get_video_duration(video_path: str) -> float:
         logging.error(f"Error getting video duration: {e}")
         return 0.0
 
-def extract_frames(video_path: str, interval: int = 5, max_frames: int = 20) -> list[str]:
+def extract_frames(video_path: str, interval: int = 5, max_frames: int = 0) -> list[str]:
     """
     Extract frames from a video using ffmpeg.
     interval: extract 1 frame every 'interval' seconds.
-    max_frames: stop extracting after this many frames.
+    max_frames: stop extracting after this many frames. If 0 or None, no limit is applied.
     
     Returns a list of file paths to the extracted images.
     """
@@ -49,10 +49,14 @@ def extract_frames(video_path: str, interval: int = 5, max_frames: int = 20) -> 
         "-y",
         "-i", video_path,
         "-vf", f"fps=1/{interval}",
-        "-vframes", str(max_frames),
+    ]
+    if max_frames and int(max_frames) > 0:
+        command.extend(["-vframes", str(max_frames)])
+        
+    command.extend([
         "-q:v", "2",  # high quality JPEG
         output_pattern
-    ]
+    ])
     
     try:
         import sys
