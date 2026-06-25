@@ -100,50 +100,49 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
         return
 
     raw_paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
-    combined_text = ""
+    session_text = ""
+    total_files = len(raw_paths)
 
-    for file_path in raw_paths:
-        if not os.path.isfile(file_path):
-            logging.error(f"File not found: {file_path}")
-            combined_text += _("proc_file_not_found").format(file_path)
-            yield combined_text.strip(), gr.update(visible=False)
-            continue
-
+    for index, file_path in enumerate(raw_paths, 1):
         filename = os.path.basename(file_path)
-        combined_text += _("proc_analyzing").format(filename)
-        yield combined_text.strip(), gr.update(visible=False)
+        header = f"### File {index}/{total_files}: {filename}\n\n"
+
+        yield session_text + header + _("proc_processing"), gr.update(visible=False)
 
         try:
+            if not os.path.isfile(file_path):
+                logging.error(f"File not found: {file_path}")
+                result = _("proc_file_not_found").format(file_path)
+                yield session_text + header + result, gr.update(visible=False)
+                session_text += header + result + "\n\n---\n\n"
+                continue
+
             if provider == "Gemini":
-                combined_text += _("uploading_to_gemini") + "\n"
-                yield combined_text.strip(), gr.update(visible=False)
+                msg = _("uploading_to_gemini")
+                yield session_text + header + msg, gr.update(visible=False)
                 
                 result = analyze_video_gemini(file_path, gemini_model, response_language)
-                combined_text += f"\n\n{result}\n\n---\n\n"
             else:
                 # Ollama or LM Studio -> need to extract frames
                 if max_frames and int(max_frames) > 0:
-                    combined_text += _("frame_extraction_info").format(frame_interval, max_frames) + "\n"
+                    msg = _("frame_extraction_info").format(frame_interval, max_frames)
                 else:
-                    combined_text += _("frame_extraction_info_no_limit").format(frame_interval) + "\n"
-                yield combined_text.strip(), gr.update(visible=False)
+                    msg = _("frame_extraction_info_no_limit").format(frame_interval)
+                yield session_text + header + msg, gr.update(visible=False)
                 
                 frames = extract_frames(file_path, interval=int(frame_interval), max_frames=int(max_frames or 0))
                 if not frames:
-                    combined_text += _("proc_error").format("No frames extracted.") + "\n\n---\n\n"
-                    continue
-                    
-                model_name = ollama_model if provider == "Ollama" else lmstudio_model
-                combined_text += _("frame_extraction_done").format(len(frames), provider) + "\n"
-                yield combined_text.strip(), gr.update(visible=False)
-                
-                if provider == "Ollama":
-                    result = analyze_frames_ollama(frames, model_name, response_language)
+                    result = _("proc_error").format("No frames extracted.")
                 else:
-                    result = analyze_frames_lmstudio(frames, model_name, response_language)
+                    msg = _("frame_extraction_done").format(len(frames), provider)
+                    yield session_text + header + msg, gr.update(visible=False)
                     
-                combined_text += f"\n\n{result}\n\n---\n\n"
-                cleanup_frames()
+                    model_name = ollama_model if provider == "Ollama" else lmstudio_model
+                    if provider == "Ollama":
+                        result = analyze_frames_ollama(frames, model_name, response_language)
+                    else:
+                        result = analyze_frames_lmstudio(frames, model_name, response_language)
+                    cleanup_frames()
 
             # Save individual description text file
             if result and not any(result.startswith(prefix) for prefix in ["[Error", "[No response", "[Gemini API Error", "[Ollama Vision Error", "[LM Studio Vision Error"]):
@@ -160,11 +159,16 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
 
         except Exception as e:
             logging.error(f"Error processing {file_path}: {e}", exc_info=True)
-            combined_text += _("proc_error").format(str(e)) + "\n\n---\n\n"
+            result = _("proc_error").format(str(e))
 
-        yield combined_text.strip(), gr.update(visible=False)
+        yield session_text + header + result, gr.update(visible=False)
+        session_text += header + result + "\n\n---\n\n"
 
-    yield combined_text.strip(), gr.update(visible=True)
+    session_text = session_text.strip()
+    if session_text.endswith("---"):
+        session_text = session_text[:-3].strip()
+
+    yield session_text, gr.update(visible=True)
 
 
 def reset_fields():
