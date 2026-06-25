@@ -100,6 +100,9 @@ def preset_query_summary():
 def preset_query_todo():
     return _("preset_todo_val")
 
+def preset_query_fix():
+    return _("preset_fix_val")
+
 
 def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames):
     """Process video files based on provider."""
@@ -383,7 +386,9 @@ def create_ui():
             with gr.Row():
                 preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
                 preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
+                preset_fix_button = gr.Button(_("preset_fix"), variant="secondary")
 
+            fix_text_mode = gr.State(False)
             user_query = gr.Textbox(label=_("enter_query_label"))
             submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
 
@@ -550,8 +555,15 @@ def create_ui():
         )
 
         # Preset query buttons
-        preset_summary_button.click(fn=preset_query_summary, inputs=[], outputs=[user_query])
-        preset_todo_button.click(fn=preset_query_todo, inputs=[], outputs=[user_query])
+        preset_summary_button.click(fn=preset_query_summary, inputs=[], outputs=[user_query]).then(
+            fn=lambda: False, inputs=[], outputs=[fix_text_mode]
+        )
+        preset_todo_button.click(fn=preset_query_todo, inputs=[], outputs=[user_query]).then(
+            fn=lambda: False, inputs=[], outputs=[fix_text_mode]
+        )
+        preset_fix_button.click(fn=preset_query_fix, inputs=[], outputs=[user_query]).then(
+            fn=lambda: True, inputs=[], outputs=[fix_text_mode]
+        )
 
         # Submit query to AI (streaming)
         submit_query_button.click(
@@ -563,6 +575,7 @@ def create_ui():
                 assist_provider,
                 assist_ollama_model,
                 assist_lmstudio_model,
+                fix_text_mode,
             ],
             outputs=[ai_response],
             stream_every=0.05,
@@ -583,9 +596,8 @@ def create_ui():
                 ai_response,
                 submit_query_button,
             ],
-        )
+        ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
         quit_button.click(fn=quit_app, inputs=[], outputs=[])
 
     return demo
-

@@ -50,6 +50,8 @@ english:
   preset_summary_val: "Summarize the video description"
   preset_todo: "🔑 To-Do List"
   preset_todo_val: "Extract the action items and to-do list from the video description"
+  preset_fix: "✏️ Fix Text"
+  preset_fix_val: "Fix the video description: correct all typos, grammar and formatting errors. Return only the corrected text, with no comments or explanations."
   enter_query_label: "Your question about the video description"
   submit_query_btn: "📤 Ask AI"
   ai_response_accordion: "💬 AI Response"
@@ -109,10 +111,10 @@ italian:
   preset_summary_val: "Fammi un riassunto della descrizione del video"
   preset_todo: "🔑 Cose da fare"
   preset_todo_val: "Estrai le cose da fare e la lista dei task dalla descrizione del video"
+  preset_fix: "✏️ Correggi Testo"
+  preset_fix_val: "Correggi la descrizione del video: sistema tutti gli errori di battitura, grammatica e formattazione. Restituisci solo il testo corretto, senza commenti o spiegazioni."
   enter_query_label: "La tua domanda sulla descrizione del video"
   submit_query_btn: "📤 Invia ad AI"
   ai_response_accordion: "💬 Risposta AI"
   copy_response: "📋 Copia Risposta"
   response_placeholder: "In attesa di una domanda..."
-
-

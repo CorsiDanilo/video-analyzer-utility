@@ -295,17 +295,26 @@ SYSTEM_PROMPT = (
     "Limitati solo a rispondere alla richiesta dell'utente."
 )
 
-def query_ollama(user_input, transcription, ollama_model):
+SYSTEM_PROMPT_FIX_TEXT = (
+    "Sei un assistente specializzato nella correzione e formattazione del testo. "
+    "Usa TUTTI i token a tua disposizione per massimizzare l'output e restituire il testo nella sua completezza. "
+    "Correggi tutti gli errori di battitura, grammatica, punteggiatura e formattazione. "
+    "NON omettere, tagliare o riassumere nessuna parte del testo originale: ogni parola deve essere presente nell'output. "
+    "Restituisci esclusivamente il testo corretto, senza commenti, prefazioni o spiegazioni."
+)
+
+def query_ollama(user_input, transcription, ollama_model, fix_text=False):
     try:
         prompt = (
             f"# Description\n{transcription}\n\n"
             f"User prompt: \n{user_input}"
         )
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         url = OLLAMA_ENDPOINT.rstrip("/") + "/api/generate"
         payload = {
             "model": ollama_model,
             "prompt": prompt,
-            "system": SYSTEM_PROMPT,
+            "system": sys_prompt,
         }
         resp = requests.post(url, json=payload, timeout=30, stream=True)
         resp.raise_for_status()
@@ -338,19 +347,20 @@ def query_ollama(user_input, transcription, ollama_model):
         logging.error(f"Error querying Ollama at {OLLAMA_ENDPOINT}: {e}")
         yield f"Error querying Ollama: {e}"
 
-def query_lmstudio(user_input, transcription, lmstudio_model):
+def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
     try:
         if not lmstudio_model:
             yield "Error querying LM Studio: no model selected."
             return
 
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
         payload = {
             "model": lmstudio_model,
             "messages": [
                 {
                     "role": "system",
-                    "content": SYSTEM_PROMPT,
+                    "content": sys_prompt,
                 },
                 {
                     "role": "user",
@@ -388,16 +398,16 @@ def query_lmstudio(user_input, transcription, lmstudio_model):
         logging.error(f"Error querying LM Studio at {LMSTUDIO_ENDPOINT}: {e}")
         yield f"Error querying LM Studio: {e}"
 
-def query_gemini(user_input, transcription, gemini_model, provider="Google", ollama_model=None, lmstudio_model=None):
+def query_gemini(user_input, transcription, gemini_model, provider="Google", ollama_model=None, lmstudio_model=None, fix_text=False):
     try:
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
-            yield from query_ollama(user_input, transcription, model_name)
+            yield from query_ollama(user_input, transcription, model_name, fix_text=fix_text)
             return
 
         if provider and str(provider).lower().startswith('lm'):
             model_name = lmstudio_model or (gemini_model if gemini_model else "local-model")
-            yield from query_lmstudio(user_input, transcription, model_name)
+            yield from query_lmstudio(user_input, transcription, model_name, fix_text=fix_text)
             return
 
         # Use Gemini
@@ -406,9 +416,10 @@ def query_gemini(user_input, transcription, gemini_model, provider="Google", oll
             return
         client = genai.Client(api_key=GEMINI_API_KEY)
 
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         user_prompt = f"# Description\n{transcription}\n\nUser prompt: \n{user_input}"
         config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT
+            system_instruction=sys_prompt
         )
 
         accumulated = ""
@@ -423,4 +434,3 @@ def query_gemini(user_input, transcription, gemini_model, provider="Google", oll
     except Exception as e:
         logging.error(f"Error querying AI provider: {e}")
         yield f"Error querying AI provider: {e}"
-
