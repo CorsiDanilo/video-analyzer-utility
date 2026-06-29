@@ -12,7 +12,10 @@ from .llm_vision import (
     list_ollama_models,
     list_lmstudio_models,
     get_sorted_gemini_models,
-    query_gemini
+    query_gemini,
+    _is_model_loaded_ollama,
+    _is_model_loaded_lmstudio,
+    _trigger_lmstudio_load
 )
 from .config import (
     get_gemini_api_key,
@@ -149,6 +152,38 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                     yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
                     
                     model_name = ollama_model if provider == "Ollama" else lmstudio_model
+                    
+                    yield session_text + header + _("llm_checking_model"), gr.update(visible=False), gr.update(visible=False)
+                    if provider == "LM Studio":
+                        _trigger_lmstudio_load(model_name)
+                    ready = False
+                    elapsed = 0
+                    while elapsed < 60:
+                        if provider == "Ollama" and _is_model_loaded_ollama(model_name):
+                            ready = True
+                            break
+                        if provider == "LM Studio" and _is_model_loaded_lmstudio(model_name):
+                            ready = True
+                            break
+                        yield session_text + header + _("llm_model_loading").format(elapsed=elapsed), gr.update(visible=False), gr.update(visible=False)
+                        import time
+                        time.sleep(2)
+                        elapsed += 2
+                    
+                    if not ready:
+                        if provider == "Ollama":
+                            yield session_text + header + _("llm_model_sending"), gr.update(visible=False), gr.update(visible=False)
+                        else:
+                            result = _("llm_model_timeout_lmstudio")
+                            yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
+                            session_text += header + result + "\n\n---\n\n"
+                            cleanup_frames()
+                            continue
+                    else:
+                        yield session_text + header + _("llm_model_ready"), gr.update(visible=False), gr.update(visible=False)
+
+                    yield session_text + header + _("video_analysis_in_progress"), gr.update(visible=False), gr.update(visible=False)
+
                     if provider == "Ollama":
                         result = analyze_frames_ollama(frames, model_name, response_language)
                     else:
