@@ -418,6 +418,13 @@ def create_ui():
                 visible=False,
             )
 
+            # Response language selector for AI assistant
+            assist_response_language = gr.Radio(
+                choices=["Italiano", "English"],
+                value="Italiano",
+                label=_("response_language_label"),
+            )
+
             with gr.Row():
                 preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
                 preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
@@ -611,6 +618,7 @@ def create_ui():
                 assist_ollama_model,
                 assist_lmstudio_model,
                 fix_text_mode,
+                assist_response_language,
             ],
             outputs=[ai_response],
             stream_every=0.05,

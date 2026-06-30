@@ -340,6 +340,12 @@ SYSTEM_PROMPT = (
     "Limitati solo a rispondere alla richiesta dell'utente."
 )
 
+SYSTEM_PROMPT_EN = (
+    "Respond clearly and helpfully based on the provided video description. \n"
+    "DO NOT start your response by stating that it is a description. \n"
+    "Limit yourself to answering only the user's request."
+)
+
 SYSTEM_PROMPT_FIX_TEXT = (
     "Sei un assistente specializzato nella correzione e formattazione del testo. "
     "Usa TUTTI i token a tua disposizione per massimizzare l'output e restituire il testo nella sua completezza. "
@@ -348,7 +354,16 @@ SYSTEM_PROMPT_FIX_TEXT = (
     "Restituisci esclusivamente il testo corretto, senza commenti, prefazioni o spiegazioni."
 )
 
-def query_ollama(user_input, transcription, ollama_model, fix_text=False):
+SYSTEM_PROMPT_FIX_TEXT_EN = (
+    "You are a specialist assistant for text correction and formatting. "
+    "Use ALL available tokens to maximize your output and return the text in its entirety. "
+    "Correct all typos, grammar, punctuation, and formatting errors. "
+    "Do NOT omit, truncate, or summarize any part of the original text: every word must be present in the output. "
+    "Return exclusively the corrected text, with no comments, preambles, or explanations."
+)
+
+def query_ollama(user_input, transcription, ollama_model, fix_text=False, response_language="Italiano"):
+    """Stream a response from a local Ollama server."""
     try:
         yield _("llm_checking_model")
         
@@ -359,6 +374,7 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False):
                 ready = True
                 break
             yield _("llm_model_loading").format(elapsed=elapsed)
+            import time
             time.sleep(2)
             elapsed += 2
             
@@ -367,11 +383,22 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False):
         else:
             yield _("llm_model_ready")
 
-        prompt = (
-            f"# Description\n{transcription}\n\n"
-            f"User prompt: \n{user_input}"
-        )
-        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
+        is_english = str(response_language).strip().lower() == "english"
+        if fix_text:
+            sys_prompt = SYSTEM_PROMPT_FIX_TEXT_EN if is_english else SYSTEM_PROMPT_FIX_TEXT
+        else:
+            sys_prompt = SYSTEM_PROMPT_EN if is_english else SYSTEM_PROMPT
+
+        if is_english:
+            prompt = (
+                f"# Description\n{transcription}\n\n"
+                f"User prompt: \n{user_input}"
+            )
+        else:
+            prompt = (
+                f"# Descrizione\n{transcription}\n\n"
+                f"User prompt: \n{user_input}"
+            )
         url = OLLAMA_ENDPOINT.rstrip("/") + "/api/generate"
         payload = {
             "model": ollama_model,
@@ -409,7 +436,8 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False):
         logging.error(f"Error querying Ollama at {OLLAMA_ENDPOINT}: {e}")
         yield f"Error querying Ollama: {e}"
 
-def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
+def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False, response_language="Italiano"):
+    """Stream a response from a local LM Studio server."""
     try:
         if not lmstudio_model:
             yield "Error querying LM Studio: no model selected."
@@ -426,6 +454,7 @@ def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
                 ready = True
                 break
             yield _("llm_model_loading").format(elapsed=elapsed)
+            import time
             time.sleep(2)
             elapsed += 2
             
@@ -435,7 +464,23 @@ def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
 
         yield _("llm_model_ready")
 
-        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
+        is_english = str(response_language).strip().lower() == "english"
+        if fix_text:
+            sys_prompt = SYSTEM_PROMPT_FIX_TEXT_EN if is_english else SYSTEM_PROMPT_FIX_TEXT
+        else:
+            sys_prompt = SYSTEM_PROMPT_EN if is_english else SYSTEM_PROMPT
+
+        if is_english:
+            user_content = (
+                f"# Description\n{transcription}\n\n"
+                f"User prompt: \n{user_input}"
+            )
+        else:
+            user_content = (
+                f"# Descrizione\n{transcription}\n\n"
+                f"User prompt: \n{user_input}"
+            )
+
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
         payload = {
             "model": lmstudio_model,
@@ -446,7 +491,7 @@ def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
                 },
                 {
                     "role": "user",
-                    "content": f"# Description\n{transcription}\n\nUser prompt: \n{user_input}",
+                    "content": user_content,
                 },
             ],
             "temperature": 0.2,
@@ -480,16 +525,21 @@ def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
         logging.error(f"Error querying LM Studio at {LMSTUDIO_ENDPOINT}: {e}")
         yield f"Error querying LM Studio: {e}"
 
-def query_gemini(user_input, transcription, gemini_model, provider="Google", ollama_model=None, lmstudio_model=None, fix_text=False):
+def query_gemini(user_input, transcription, gemini_model, provider="Google", ollama_model=None, lmstudio_model=None, fix_text=False, response_language="Italiano"):
+    """Dispatch query to the selected provider and stream the response.
+
+    response_language: "Italiano" (default) or "English" — controls the
+    language the LLM is instructed to reply in.
+    """
     try:
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
-            yield from query_ollama(user_input, transcription, model_name, fix_text=fix_text)
+            yield from query_ollama(user_input, transcription, model_name, fix_text=fix_text, response_language=response_language)
             return
 
         if provider and str(provider).lower().startswith('lm'):
             model_name = lmstudio_model or (gemini_model if gemini_model else "local-model")
-            yield from query_lmstudio(user_input, transcription, model_name, fix_text=fix_text)
+            yield from query_lmstudio(user_input, transcription, model_name, fix_text=fix_text, response_language=response_language)
             return
 
         # Use Gemini
@@ -501,8 +551,17 @@ def query_gemini(user_input, transcription, gemini_model, provider="Google", oll
 
         client = genai.Client(api_key=GEMINI_API_KEY)
 
-        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
-        user_prompt = f"# Description\n{transcription}\n\nUser prompt: \n{user_input}"
+        is_english = str(response_language).strip().lower() == "english"
+        if fix_text:
+            sys_prompt = SYSTEM_PROMPT_FIX_TEXT_EN if is_english else SYSTEM_PROMPT_FIX_TEXT
+        else:
+            sys_prompt = SYSTEM_PROMPT_EN if is_english else SYSTEM_PROMPT
+
+        if is_english:
+            user_prompt = f"# Description\n{transcription}\n\nUser prompt: \n{user_input}"
+        else:
+            user_prompt = f"# Descrizione\n{transcription}\n\nUser prompt: \n{user_input}"
+
         config = types.GenerateContentConfig(
             system_instruction=sys_prompt
         )
