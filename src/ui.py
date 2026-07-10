@@ -23,8 +23,8 @@ from .config import (
     _
 )
 
-def browse_local_files():
-    """Open a native file dialog to select one or more files."""
+def browse_local_files(existing_paths=""):
+    """Open a native file dialog to select files."""
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -32,7 +32,8 @@ def browse_local_files():
         root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)
-        selected_paths = filedialog.askopenfilenames(
+
+        files = filedialog.askopenfilenames(
             title=_("dialog_select_title"),
             filetypes=[
                 (_("dialog_filter_video"), "*.mp4 *.mov *.mkv *.avi"),
@@ -41,15 +42,58 @@ def browse_local_files():
             parent=root,
         )
         root.destroy()
-        if selected_paths:
-            return "\n".join(selected_paths)
+
+        if files:
+            new_paths = "\n".join(list(files))
+            existing = existing_paths.strip() if existing_paths else ""
+            if existing:
+                return f"{existing}\n{new_paths}"
+            return new_paths
         return gr.update()
     except Exception as e:
         logging.error(f"Error selecting files: {e}")
         gr.Error(_("dialog_err_select").format(str(e)))
         return gr.update()
 
-def save_extracted_text(extracted_text, file_paths_text=""):
+def browse_local_folders(existing_paths=""):
+    """Open a native folder dialog and recursively get all files inside."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        import os
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        folder = filedialog.askdirectory(
+            title=_("dialog_select_type_title"),
+            parent=root,
+        )
+        root.destroy()
+
+        if folder:
+            SUPPORTED_EXTS = {".mp4", ".mov", ".mkv", ".avi"}
+            expanded_paths = []
+            for root_dir, dirs, files in os.walk(folder):
+                for f in files:
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in SUPPORTED_EXTS:
+                        expanded_paths.append(os.path.join(root_dir, f))
+            
+            if expanded_paths:
+                new_paths = "\n".join(expanded_paths)
+                existing = existing_paths.strip() if existing_paths else ""
+                if existing:
+                    return f"{existing}\n{new_paths}"
+                return new_paths
+        return gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting folders: {e}")
+        gr.Error(_("dialog_err_select").format(str(e)))
+        return gr.update()
+
+def save_extracted_text(extracted_text, file_paths_text="", output_format=".txt"):
     """Open a native Save As dialog to save the extracted text."""
     if not extracted_text or not extracted_text.strip():
         gr.Warning(_("proc_no_files"))
@@ -66,18 +110,17 @@ def save_extracted_text(extracted_text, file_paths_text=""):
             first_file = file_paths_text.strip().split("\n")[0].strip()
             import os
             video_name = os.path.splitext(os.path.basename(first_file))[0]
-            initialfile = f"{video_name}_description.txt"
+            initialfile = f"{video_name}_description{output_format}"
         else:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            initialfile = f"video_analysis_{timestamp}.txt"
+            initialfile = f"video_analysis_{timestamp}{output_format}"
 
         target_path = filedialog.asksaveasfilename(
             title=_("dialog_save_title"),
             initialfile=initialfile,
-            defaultextension=".txt",
+            defaultextension=output_format,
             filetypes=[
-                ("Text Files", "*.txt"),
-                ("Markdown Files", "*.md"),
+                (_("dialog_filter_md") if output_format == ".md" else "Text Files", f"*{output_format}"),
                 (_("dialog_filter_all"), "*.*"),
             ],
             parent=root,
@@ -107,53 +150,72 @@ def preset_query_fix():
     return _("preset_fix_val")
 
 
-def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames):
+def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames, output_format=".txt"):
     """Process video files based on provider."""
     if not file_paths_text or not file_paths_text.strip():
-        yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False)
+        yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False), gr.update()
         return
 
     raw_paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
-    session_text = ""
-    total_files = len(raw_paths)
+    
+    SUPPORTED_EXTS = {".mp4", ".mov", ".mkv", ".avi"}
+    expanded_paths = []
+    for p in raw_paths:
+        if os.path.isdir(p):
+            for root_dir, dirs, files in os.walk(p):
+                for f in files:
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in SUPPORTED_EXTS:
+                        expanded_paths.append(os.path.join(root_dir, f))
+        else:
+            expanded_paths.append(p)
 
-    for index, file_path in enumerate(raw_paths, 1):
+    file_paths_text_new = "\n".join(expanded_paths)
+
+    if not expanded_paths:
+        yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False), file_paths_text
+        return
+
+    session_text = ""
+    total_files = len(expanded_paths)
+
+    for index, file_path in enumerate(expanded_paths, 1):
         filename = os.path.basename(file_path)
         header = f"### File {index}/{total_files}: {filename}\n\n"
 
-        yield session_text + header + _("proc_processing"), gr.update(visible=False), gr.update(visible=False)
+        yield session_text + header + _("proc_processing"), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
         try:
             if not os.path.isfile(file_path):
                 logging.error(f"File not found: {file_path}")
                 result = _("proc_file_not_found").format(file_path)
-                yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
+                yield session_text + header + result, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                 session_text += header + result + "\n\n---\n\n"
                 continue
 
             if provider == "Google":
                 msg = _("uploading_to_gemini")
-                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
+                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                 
-                result = analyze_video_gemini(file_path, gemini_model, response_language)
+                result = analyze_video_gemini(file_path, gemini_model, response_language, output_format)
             else:
                 # Ollama or LM Studio -> need to extract frames
                 if max_frames and int(max_frames) > 0:
                     msg = _("frame_extraction_info").format(frame_interval, max_frames)
                 else:
                     msg = _("frame_extraction_info_no_limit").format(frame_interval)
-                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
+                yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                 
                 frames = extract_frames(file_path, interval=int(frame_interval), max_frames=int(max_frames or 0))
                 if not frames:
                     result = _("proc_error").format("No frames extracted.")
                 else:
                     msg = _("frame_extraction_done").format(len(frames), provider)
-                    yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False)
+                    yield session_text + header + msg, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                     
                     model_name = ollama_model if provider == "Ollama" else lmstudio_model
                     
-                    yield session_text + header + _("llm_checking_model"), gr.update(visible=False), gr.update(visible=False)
+                    yield session_text + header + _("llm_checking_model"), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                     if provider == "LM Studio":
                         _trigger_lmstudio_load(model_name)
                     ready = False
@@ -165,29 +227,29 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                         if provider == "LM Studio" and _is_model_loaded_lmstudio(model_name):
                             ready = True
                             break
-                        yield session_text + header + _("llm_model_loading").format(elapsed=elapsed), gr.update(visible=False), gr.update(visible=False)
+                        yield session_text + header + _("llm_model_loading").format(elapsed=elapsed), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                         import time
                         time.sleep(2)
                         elapsed += 2
                     
                     if not ready:
                         if provider == "Ollama":
-                            yield session_text + header + _("llm_model_sending"), gr.update(visible=False), gr.update(visible=False)
+                            yield session_text + header + _("llm_model_sending"), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                         else:
                             result = _("llm_model_timeout_lmstudio")
-                            yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
+                            yield session_text + header + result, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                             session_text += header + result + "\n\n---\n\n"
                             cleanup_frames()
                             continue
                     else:
-                        yield session_text + header + _("llm_model_ready"), gr.update(visible=False), gr.update(visible=False)
+                        yield session_text + header + _("llm_model_ready"), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
-                    yield session_text + header + _("video_analysis_in_progress"), gr.update(visible=False), gr.update(visible=False)
+                    yield session_text + header + _("video_analysis_in_progress"), gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
                     if provider == "Ollama":
-                        result = analyze_frames_ollama(frames, model_name, response_language)
+                        result = analyze_frames_ollama(frames, model_name, response_language, output_format)
                     else:
-                        result = analyze_frames_lmstudio(frames, model_name, response_language)
+                        result = analyze_frames_lmstudio(frames, model_name, response_language, output_format)
                     cleanup_frames()
 
             # Save individual description text file
@@ -196,7 +258,7 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                     from pathlib import Path
                     video_path_obj = Path(file_path)
                     video_name = video_path_obj.stem
-                    out_file = video_path_obj.with_name(f"{video_name}_description.txt")
+                    out_file = video_path_obj.with_name(f"{video_name}_description{output_format}")
                     with open(out_file, "w", encoding="utf-8") as f:
                         f.write(result.strip())
                     logging.info(f"Auto-saved individual analysis to {out_file}")
@@ -207,14 +269,14 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
             logging.error(f"Error processing {file_path}: {e}", exc_info=True)
             result = _("proc_error").format(str(e))
 
-        yield session_text + header + result, gr.update(visible=False), gr.update(visible=False)
+        yield session_text + header + result, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
         session_text += header + result + "\n\n---\n\n"
 
     session_text = session_text.strip()
     if session_text.endswith("---"):
         session_text = session_text[:-3].strip()
 
-    yield session_text, gr.update(visible=True), gr.update(visible=True)
+    yield session_text, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
 
 
 
@@ -226,6 +288,7 @@ def reset_fields():
         "",                          # user_query
         _("response_placeholder"),   # ai_response
         gr.update(visible=False),    # submit_query_button
+        ".txt",                      # output_format
     )
 
 
@@ -270,7 +333,9 @@ def create_ui():
                 placeholder=_("file_path_placeholder"),
                 lines=3,
             )
-        browse_button = gr.Button(_("browse_btn"), variant="secondary")
+        with gr.Row():
+            browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
+            browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
 
         config_accordion = gr.Accordion(label=_("config_accordion"), open=True)
         with config_accordion:
@@ -278,6 +343,12 @@ def create_ui():
                 choices=["Italiano", "English"],
                 value="Italiano",
                 label=_("response_language_label"),
+            )
+            
+            output_format = gr.Radio(
+                choices=[".txt", ".md"],
+                value=".txt",
+                label=_("output_format_label"),
             )
             
             provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
@@ -345,7 +416,9 @@ def create_ui():
                     frame_interval = gr.Number(value=2, label=_("frame_interval_label"), precision=0, minimum=1)
                     max_frames = gr.Number(value=0, label=_("max_frames_label"), precision=0, minimum=0)
 
-        process_btn = gr.Button(_("process_btn"), variant="primary")
+        with gr.Row():
+            process_btn = gr.Button(_("process_btn"), variant="primary")
+            stop_process_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
 
         output_accordion = gr.Accordion(_("output_accordion"), open=True)
         with output_accordion:
@@ -432,7 +505,9 @@ def create_ui():
 
             fix_text_mode = gr.State(False)
             user_query = gr.Textbox(label=_("enter_query_label"))
-            submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+            with gr.Row():
+                submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+                stop_query_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
 
         with gr.Accordion(_("ai_response_accordion")):
             copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
@@ -444,7 +519,8 @@ def create_ui():
 
 
         # EVENT HANDLERS
-        browse_button.click(fn=browse_local_files, inputs=[], outputs=[file_path_input])
+        browse_files_btn.click(fn=browse_local_files, inputs=[file_path_input], outputs=[file_path_input])
+        browse_folders_btn.click(fn=browse_local_folders, inputs=[file_path_input], outputs=[file_path_input])
 
         def _provider_change(p):
             no_models = _("no_models_found")
@@ -522,7 +598,12 @@ def create_ui():
             outputs=[ollama_model], 
         )
 
-        process_btn.click(
+        proc_start = process_btn.click(
+            fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+            inputs=[],
+            outputs=[process_btn, stop_process_btn]
+        )
+        proc_event = proc_start.then(
             fn=process_video,
             inputs=[
                 file_path_input,
@@ -532,12 +613,24 @@ def create_ui():
                 ollama_model,
                 lmstudio_model,
                 frame_interval,
-                max_frames
+                max_frames,
+                output_format,
             ],
-            outputs=[output_text, save_button, submit_query_button],
+            outputs=[output_text, save_button, submit_query_button, file_path_input],
+        )
+        proc_event.then(
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            inputs=[],
+            outputs=[process_btn, stop_process_btn]
+        )
+        stop_process_btn.click(
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            inputs=[],
+            outputs=[process_btn, stop_process_btn],
+            cancels=[proc_event]
         )
 
-        save_button.click(fn=save_extracted_text, inputs=[output_text, file_path_input], outputs=[])
+        save_button.click(fn=save_extracted_text, inputs=[output_text, file_path_input, output_format], outputs=[])
 
         js_copy_text = "(text) => { navigator.clipboard.writeText(text); }"
         copy_text_button.click(
@@ -608,7 +701,12 @@ def create_ui():
         )
 
         # Submit query to AI (streaming)
-        submit_query_button.click(
+        query_start = submit_query_button.click(
+            fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+            inputs=[],
+            outputs=[submit_query_button, stop_query_btn]
+        )
+        query_event = query_start.then(
             fn=query_gemini,
             inputs=[
                 user_query,
@@ -622,6 +720,17 @@ def create_ui():
             ],
             outputs=[ai_response],
             stream_every=0.05,
+        )
+        query_event.then(
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            inputs=[],
+            outputs=[submit_query_button, stop_query_btn]
+        )
+        stop_query_btn.click(
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            inputs=[],
+            outputs=[submit_query_button, stop_query_btn],
+            cancels=[query_event]
         )
 
         copy_response_button.click(
@@ -638,6 +747,7 @@ def create_ui():
                 user_query,
                 ai_response,
                 submit_query_button,
+                output_format,
             ],
         ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 

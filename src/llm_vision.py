@@ -71,39 +71,90 @@ def _image_to_base64(img_path: str) -> str:
         logging.error(f"Error encoding image {img_path}: {e}")
         return ""
 
-def _get_video_prompt(language: str = "Italiano") -> str:
+def strip_markdown(text: str) -> str:
+    """Helper to remove common markdown formatting syntax for raw text output."""
+    import re
+    # Remove bold and italic markers
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\*([^*]+)\*", r"\1", text)
+    # Remove header symbols at the start of lines
+    text = re.sub(r"^(#+)\s+", "", text, flags=re.MULTILINE)
+    # Remove horizontal rules
+    text = re.sub(r"^---+$", "", text, flags=re.MULTILINE)
+    # Remove bullet points (keeping the text)
+    text = re.sub(r"^\s*[-*+]\s+", "", text, flags=re.MULTILINE)
+    # Remove numbered lists prefix
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
+    return text.strip()
+
+def _get_video_prompt(language: str = "Italiano", output_format: str = ".txt") -> str:
     if language.lower() == "italiano":
-        return (
+        prompt = (
             "Questi sono frame sequenziali estratti da un video, o il video stesso. "
             "Guarda/analizza il contenuto visivo dall'inizio alla fine e fornisci una "
             "descrizione dettagliata e unificata di ciò che accade in italiano. Non menzionare che "
             "questi sono frame, descrivi semplicemente gli eventi del video in modo naturale."
         )
     else:
-        return (
+        prompt = (
             "These are sequential frames from a video, or the video itself. "
             "Watch/analyze the visual content from start to finish and provide a "
             "detailed and unified description of what happens in english. Do not mention that "
             "these are frames, just describe the events in the video naturally."
         )
 
-def _get_video_system_instruction(language: str = "Italiano") -> str:
+    # Append output format instructions
+    if output_format == ".md":
+        if language.lower() == "italiano":
+            prompt += (
+                " Formatta la risposta in Markdown (preservando elementi in grassetto/corsivo, tabelle, paragrafi, elenchi e intestazioni ove appropriato)."
+            )
+        else:
+            prompt += (
+                " Format your response using Markdown (preserving bold/italic elements, tables, paragraphs, lists, and headings where appropriate)."
+            )
+    elif output_format == ".txt":
+        if language.lower() == "italiano":
+            prompt += (
+                " Rispondi rigorosamente in testo semplice raw. NON utilizzare tag markdown, asterischi, cancelletti o delimitatori di tabelle markdown."
+            )
+        else:
+            prompt += (
+                " Respond strictly in raw plain text format. DO NOT use any markdown tags, asterisks, hashtags, or markdown table delimiters."
+            )
+
+    return prompt
+
+def _get_video_system_instruction(language: str = "Italiano", output_format: str = ".txt") -> str:
     if language.lower() == "italiano":
-        return (
+        instruction = (
             "IMPORTANTE: Restituisci DIRETTAMENTE il testo trascritto o la descrizione "
             "senza alcuna introduzione, spiegazione, prefazione, chiusura o commento aggiuntivo. "
             "Non includere frasi del tipo 'Ecco il testo...', 'Di seguito l'estrazione...', 'Ecco la descrizione...' o simili. "
             "Inizia a rispondere direttamente con il contenuto richiesto."
         )
     else:
-        return (
+        instruction = (
             "IMPORTANT: Return the transcribed text or description DIRECTLY "
             "without any introduction, explanation, preface, closing, or additional comment. "
             "Do not include sentences like 'Here is the text...', 'Below is the extraction...', 'Here is the description...' or similar. "
             "Start responding directly with the requested content."
         )
 
-def analyze_video_gemini(video_path: str, model_name: str, response_language: str = "Italiano") -> str:
+    if output_format == ".md":
+        if language.lower() == "italiano":
+            instruction += " Formatta l'output in Markdown."
+        else:
+            instruction += " Format the output in Markdown."
+    elif output_format == ".txt":
+        if language.lower() == "italiano":
+            instruction += " Rispondi rigorosamente in testo semplice raw senza formattazione markdown."
+        else:
+            instruction += " Respond strictly in raw plain text without markdown formatting."
+
+    return instruction
+
+def analyze_video_gemini(video_path: str, model_name: str, response_language: str = "Italiano", output_format: str = ".txt") -> str:
     """Upload video to Gemini via File API and analyze it."""
     if not GEMINI_API_KEY:
         return "[Error: GEMINI_API_KEY not configured in .env or config/gemini.yaml]"
@@ -124,8 +175,8 @@ def analyze_video_gemini(video_path: str, model_name: str, response_language: st
             return "[Error: Gemini failed to process the video file.]"
             
         logging.info(f"Video ready. Sending generation request to {model_name}...")
-        prompt = _get_video_prompt(response_language)
-        system_instruction = _get_video_system_instruction(response_language)
+        prompt = _get_video_prompt(response_language, output_format)
+        system_instruction = _get_video_system_instruction(response_language, output_format)
         
         config = types.GenerateContentConfig(
             system_instruction=system_instruction
@@ -143,16 +194,19 @@ def analyze_video_gemini(video_path: str, model_name: str, response_language: st
         except Exception as e:
             logging.warning(f"Failed to delete file from Gemini: {e}")
             
-        return response.text.strip()
+        result = response.text.strip()
+        if output_format == ".txt":
+            result = strip_markdown(result)
+        return result
     except Exception as e:
         logging.error(f"Gemini API Error: {e}", exc_info=True)
         return f"[Gemini API Error: {str(e)}]"
 
-def analyze_frames_ollama(frame_paths: list[str], model_name: str, response_language: str = "Italiano") -> str:
+def analyze_frames_ollama(frame_paths: list[str], model_name: str, response_language: str = "Italiano", output_format: str = ".txt") -> str:
     """Send all frames to Ollama in a single request."""
     try:
-        prompt = _get_video_prompt(response_language)
-        system_instruction = _get_video_system_instruction(response_language)
+        prompt = _get_video_prompt(response_language, output_format)
+        system_instruction = _get_video_system_instruction(response_language, output_format)
         images_b64 = []
         for path in frame_paths:
             b64 = _image_to_base64(path)
@@ -184,16 +238,19 @@ def analyze_frames_ollama(frame_paths: list[str], model_name: str, response_lang
                     accumulated += obj["response"]
             except Exception:
                 continue
-        return accumulated.strip() if accumulated else "[No response from Ollama]"
+        result = accumulated.strip() if accumulated else "[No response from Ollama]"
+        if output_format == ".txt":
+            result = strip_markdown(result)
+        return result
     except Exception as e:
         logging.error(f"Ollama Vision API Error ({OLLAMA_ENDPOINT}): {e}", exc_info=True)
         return f"[Ollama Vision Error ({OLLAMA_ENDPOINT}): {str(e)}]"
 
-def analyze_frames_lmstudio(frame_paths: list[str], model_name: str, response_language: str = "Italiano") -> str:
+def analyze_frames_lmstudio(frame_paths: list[str], model_name: str, response_language: str = "Italiano", output_format: str = ".txt") -> str:
     """Send all frames to LM Studio in a single request."""
     try:
-        prompt = _get_video_prompt(response_language)
-        system_instruction = _get_video_system_instruction(response_language)
+        prompt = _get_video_prompt(response_language, output_format)
+        system_instruction = _get_video_system_instruction(response_language, output_format)
         
         content_array = [{"type": "text", "text": prompt}]
         for path in frame_paths:
@@ -230,7 +287,10 @@ def analyze_frames_lmstudio(frame_paths: list[str], model_name: str, response_la
         choices = data.get("choices", [])
         if choices and isinstance(choices[0], dict):
             message = choices[0].get("message", {})
-            return message.get("content", "").strip()
+            result = message.get("content", "").strip()
+            if output_format == ".txt":
+                result = strip_markdown(result)
+            return result
         return "[No response from LM Studio]"
     except Exception as e:
         logging.error(f"LM Studio Vision API Error ({LMSTUDIO_ENDPOINT}): {e}", exc_info=True)

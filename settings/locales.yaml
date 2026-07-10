@@ -1,134 +1,170 @@
 english:
-  title: "# 🎥 Video Analyzer Utility"
-  file_path_label: "Video File Path(s)"
-  file_path_placeholder: "Select one or more video files (.mp4, .mov, .mkv, .avi)..."
-  browse_btn: "📁 Browse Video Files"
-  config_accordion: "⚙️ Vision Engine Configuration"
-  provider_label: "AI Provider"
-  gemini_model_label: "Gemini Model"
-  ollama_model_label: "Ollama Model"
-  lmstudio_model_label: "LM Studio Model"
-  refresh_btn: "🔄 Refresh Models"
-  response_language_label: "Response Language"
-  frame_interval_label: "Frame Interval (seconds)"
-  max_frames_label: "Max Frames limit (0 for unlimited)"
-  process_btn: "🚀 Analyze Video"
-  output_accordion: "📝 Video Description"
-  copy_btn: "📋 Copy Result"
-  output_placeholder: "The video description will appear here..."
-  save_btn: "💾 Save As..."
-  reset_btn: "🔄 Reset"
-  quit_btn: "❌ Quit"
-  quitting: "Application shutting down..."
-  tray_show_hide: "👁️ Show / Hide App"
-  tray_exit: "❌ Exit"
-  proc_processing: "Processing..."
-  copy_success: "Copied to clipboard!"
-  no_models_found: "No models found"
-  dialog_select_title: "Select Video Files"
-  dialog_filter_video: "Video Files"
-  dialog_filter_all: "All Files"
-  dialog_save_title: "Save Transcription"
-  dialog_info_saved: "File saved to:\n{}"
-  dialog_info_cancelled: "Save cancelled."
-  dialog_err_select: "Error selecting files: {}"
-  dialog_err_save: "Error saving file: {}"
-  proc_no_files: "Please select at least one file."
-  proc_file_not_found: "\nFile not found: {}"
-  proc_analyzing: "\nAnalyzing video: {}...\n"
-  proc_error: "\nError: {}"
-  frame_extraction_info: "Extracting frames (1 every {}s, max {} frames)..."
-  frame_extraction_info_no_limit: "Extracting frames (1 every {}s, no limit)..."
-  frame_extraction_done: "Extracted {} frames. Analyzing with {}..."
-  uploading_to_gemini: "Uploading video to Gemini..."
-  waiting_for_gemini: "Waiting for video processing to complete on Gemini..."
-  analyzing_with_gemini: "Analyzing video with Gemini..."
-  model_family_label: "Model Family"
-  assistant_accordion: "🤖 AI Assistant (Post-Processing)"
-  assist_provider_label: "AI Provider"
-  preset_summary: "📝 Summary"
-  preset_summary_val: "Summarize the video description"
-  preset_todo: "🔑 To-Do List"
-  preset_todo_val: "Extract the action items and to-do list from the video description"
-  preset_fix: "✏️ Fix Text"
-  preset_fix_val: "Fix the video description: correct all typos, grammar and formatting errors. Return only the corrected text, with no comments or explanations."
-  enter_query_label: "Your question about the video description"
-  submit_query_btn: "📤 Ask AI"
-  ai_response_accordion: "💬 AI Response"
-  copy_response: "📋 Copy Response"
-  response_placeholder: "Waiting for a query..."
-  video_analysis_in_progress: "⏳ Video frame analysis in progress..."
-  llm_checking_model: "⏳ Checking model status..."
-  llm_model_loading: "⏳ Waiting for model to load... ({elapsed}s)"
-  llm_model_ready: "⏳ Model ready. Sending request..."
-  llm_model_sending: "⏳ Model may be loading. Sending request..."
-  llm_model_timeout_lmstudio: "❌ Error: model not found in LM Studio. Please load it before proceeding."
-  llm_waiting_gemini: "⏳ Sending request to Gemini..."
+  title: '# 🎥 Video Analyzer Utility'
+  file_path_label: Video File Path(s)
+  file_path_placeholder: Select one or more video files (.mp4, .mov, .mkv, .avi)...
+  browse_btn: 📁 Browse Video Files
+  output_format_label: Output Format
+  dialog_select_type_title: Selection Mode
+  dialog_select_type_prompt: Would you like to select files or an entire folder?
+  dialog_btn_files: 📄 Files
+  dialog_btn_folder: 📂 Folder
+  config_accordion: ⚙️ Vision Engine Configuration
+  provider_label: AI Provider
+  gemini_model_label: Gemini Model
+  ollama_model_label: Ollama Model
+  lmstudio_model_label: LM Studio Model
+  refresh_btn: 🔄 Refresh Models
+  response_language_label: Response Language
+  frame_interval_label: Frame Interval (seconds)
+  max_frames_label: Max Frames limit (0 for unlimited)
+  process_btn: 🚀 Analyze Video
+  output_accordion: 📝 Video Description
+  copy_btn: 📋 Copy Result
+  output_placeholder: The video description will appear here...
+  save_btn: 💾 Save As...
+  reset_btn: 🔄 Reset
+  quit_btn: ❌ Quit
+  quitting: Application shutting down...
+  tray_show_hide: 👁️ Show / Hide App
+  tray_exit: ❌ Exit
+  proc_processing: Processing...
+  copy_success: Copied to clipboard!
+  no_models_found: No models found
+  dialog_select_title: Select Video Files
+  dialog_filter_video: Video Files
+  dialog_filter_all: All Files
+  dialog_save_title: Save Transcription
+  dialog_info_saved: 'File saved to:
 
-  
+    {}'
+  dialog_info_cancelled: Save cancelled.
+  dialog_err_select: 'Error selecting files: {}'
+  dialog_err_save: 'Error saving file: {}'
+  proc_no_files: Please select at least one file.
+  proc_file_not_found: '
+
+    File not found: {}'
+  proc_analyzing: '
+
+    Analyzing video: {}...
+
+    '
+  proc_error: '
+
+    Error: {}'
+  frame_extraction_info: Extracting frames (1 every {}s, max {} frames)...
+  frame_extraction_info_no_limit: Extracting frames (1 every {}s, no limit)...
+  frame_extraction_done: Extracted {} frames. Analyzing with {}...
+  uploading_to_gemini: Uploading video to Gemini...
+  waiting_for_gemini: Waiting for video processing to complete on Gemini...
+  analyzing_with_gemini: Analyzing video with Gemini...
+  model_family_label: Model Family
+  assistant_accordion: 🤖 AI Assistant (Post-Processing)
+  assist_provider_label: AI Provider
+  preset_summary: 📝 Summary
+  preset_summary_val: Summarize the video description
+  preset_todo: 🔑 To-Do List
+  preset_todo_val: Extract the action items and to-do list from the video description
+  preset_fix: ✏️ Fix Text
+  preset_fix_val: 'Fix the video description: correct all typos, grammar and formatting
+    errors. Return only the corrected text, with no comments or explanations.'
+  enter_query_label: Your question about the video description
+  submit_query_btn: 📤 Ask AI
+  ai_response_accordion: 💬 AI Response
+  copy_response: 📋 Copy Response
+  response_placeholder: Waiting for a query...
+  video_analysis_in_progress: ⏳ Video frame analysis in progress...
+  llm_checking_model: ⏳ Checking model status...
+  llm_model_loading: ⏳ Waiting for model to load... ({elapsed}s)
+  llm_model_ready: ⏳ Model ready. Sending request...
+  llm_model_sending: ⏳ Model may be loading. Sending request...
+  llm_model_timeout_lmstudio: '❌ Error: model not found in LM Studio. Please load
+    it before proceeding.'
+  llm_waiting_gemini: ⏳ Sending request to Gemini...
+  stop_btn: 🛑 Stop
 italian:
-  title: "🎥 Utilità di Analisi Video"
-  file_path_label: "Percorso File Video"
-  file_path_placeholder: "Seleziona uno o più file video (.mp4, .mov, .mkv, .avi)..."
-  browse_btn: "📁 Sfoglia File Video"
-  config_accordion: "⚙️ Configurazione Motore Vision"
-  provider_label: "Provider AI"
-  gemini_model_label: "Modello Gemini"
-  ollama_model_label: "Modello Ollama"
-  lmstudio_model_label: "Modello LM Studio"
-  refresh_btn: "🔄 Aggiorna Modelli"
-  response_language_label: "Lingua di Risposta"
-  frame_interval_label: "Intervallo Frame (secondi)"
-  max_frames_label: "Limite Frame Massimi (0 per nessun limite)"
-  process_btn: "🚀 Analizza Video"
-  output_accordion: "📝 Descrizione del Video"
-  copy_btn: "📋 Copia Risultato"
-  output_placeholder: "La descrizione del video apparirà qui..."
-  save_btn: "💾 Salva con nome..."
-  reset_btn: "🔄 Reimposta"
-  quit_btn: "❌ Esci"
-  quitting: "Chiusura dell'applicazione in corso..."
-  tray_show_hide: "👁️ Mostra / Nascondi App"
-  tray_exit: "❌ Esci"
-  proc_processing: "Elaborazione in corso..."
-  copy_success: "Copiato negli appunti!"
-  no_models_found: "Nessun modello trovato"
-  dialog_select_title: "Seleziona File Video"
-  dialog_filter_video: "File Video"
-  dialog_filter_all: "Tutti i File"
-  dialog_save_title: "Salva Trascrizione"
-  dialog_info_saved: "File salvato in:\n{}"
-  dialog_info_cancelled: "Salvataggio annullato."
-  dialog_err_select: "Errore durante la selezione: {}"
-  dialog_err_save: "Errore durante il salvataggio: {}"
-  proc_no_files: "Seleziona almeno un file."
-  proc_file_not_found: "\nFile non trovato: {}"
-  proc_analyzing: "\nAnalisi video in corso: {}...\n"
-  proc_error: "\nErrore: {}"
-  frame_extraction_info: "Estrazione frame in corso (1 ogni {}s, max {} frame)..."
-  frame_extraction_info_no_limit: "Estrazione frame in corso (1 ogni {}s, nessun limite)..."
-  frame_extraction_done: "Estratti {} frame. Analisi con {}..."
-  uploading_to_gemini: "Caricamento del video su Gemini in corso..."
-  waiting_for_gemini: "Attesa del completamento del processing su Gemini..."
-  analyzing_with_gemini: "Analisi del video con Gemini..."
-  model_family_label: "Famiglia Modelli"
-  assistant_accordion: "🤖 Assistente AI (Post-Elaborazione)"
-  assist_provider_label: "Provider AI"
-  preset_summary: "📝 Riassunto"
-  preset_summary_val: "Fammi un riassunto della descrizione del video"
-  preset_todo: "🔑 Cose da fare"
-  preset_todo_val: "Estrai le cose da fare e la lista dei task dalla descrizione del video"
-  preset_fix: "✏️ Correggi Testo"
-  preset_fix_val: "Correggi la descrizione del video: sistema tutti gli errori di battitura, grammatica e formattazione. Restituisci solo il testo corretto, senza commenti o spiegazioni."
-  enter_query_label: "La tua domanda sulla descrizione del video"
-  submit_query_btn: "📤 Invia ad AI"
-  ai_response_accordion: "💬 Risposta AI"
-  copy_response: "📋 Copia Risposta"
-  response_placeholder: "In attesa di una domanda..."
-  video_analysis_in_progress: "⏳ Analisi frame video in corso..."
-  llm_checking_model: "⏳ Verifica stato modello..."
-  llm_model_loading: "⏳ In attesa che il modello venga caricato... ({elapsed}s)"
-  llm_model_ready: "⏳ Modello pronto. Invio richiesta..."
-  llm_model_sending: "⏳ Il modello potrebbe essere in caricamento. Invio richiesta..."
-  llm_model_timeout_lmstudio: "❌ Errore: il modello non è presente in LM Studio. Assicurarsi che sia caricato prima di procedere."
-  llm_waiting_gemini: "⏳ Invio richiesta a Gemini..."
+  title: 🎥 Utilità di Analisi Video
+  file_path_label: Percorso File Video
+  file_path_placeholder: Seleziona uno o più file video (.mp4, .mov, .mkv, .avi)...
+  browse_btn: 📁 Sfoglia File Video
+  output_format_label: Formato di Output
+  dialog_select_type_title: Modalità Selezione
+  dialog_select_type_prompt: Vuoi selezionare dei singoli file o un'intera cartella?
+  dialog_btn_files: 📄 File
+  dialog_btn_folder: 📂 Cartella
+  config_accordion: ⚙️ Configurazione Motore Vision
+  provider_label: Provider AI
+  gemini_model_label: Modello Gemini
+  ollama_model_label: Modello Ollama
+  lmstudio_model_label: Modello LM Studio
+  refresh_btn: 🔄 Aggiorna Modelli
+  response_language_label: Lingua di Risposta
+  frame_interval_label: Intervallo Frame (secondi)
+  max_frames_label: Limite Frame Massimi (0 per nessun limite)
+  process_btn: 🚀 Analizza Video
+  output_accordion: 📝 Descrizione del Video
+  copy_btn: 📋 Copia Risultato
+  output_placeholder: La descrizione del video apparirà qui...
+  save_btn: 💾 Salva con nome...
+  reset_btn: 🔄 Reimposta
+  quit_btn: ❌ Esci
+  quitting: Chiusura dell'applicazione in corso...
+  tray_show_hide: 👁️ Mostra / Nascondi App
+  tray_exit: ❌ Esci
+  proc_processing: Elaborazione in corso...
+  copy_success: Copiato negli appunti!
+  no_models_found: Nessun modello trovato
+  dialog_select_title: Seleziona File Video
+  dialog_filter_video: File Video
+  dialog_filter_all: Tutti i File
+  dialog_save_title: Salva Trascrizione
+  dialog_info_saved: 'File salvato in:
+
+    {}'
+  dialog_info_cancelled: Salvataggio annullato.
+  dialog_err_select: 'Errore durante la selezione: {}'
+  dialog_err_save: 'Errore durante il salvataggio: {}'
+  proc_no_files: Seleziona almeno un file.
+  proc_file_not_found: '
+
+    File non trovato: {}'
+  proc_analyzing: '
+
+    Analisi video in corso: {}...
+
+    '
+  proc_error: '
+
+    Errore: {}'
+  frame_extraction_info: Estrazione frame in corso (1 ogni {}s, max {} frame)...
+  frame_extraction_info_no_limit: Estrazione frame in corso (1 ogni {}s, nessun limite)...
+  frame_extraction_done: Estratti {} frame. Analisi con {}...
+  uploading_to_gemini: Caricamento del video su Gemini in corso...
+  waiting_for_gemini: Attesa del completamento del processing su Gemini...
+  analyzing_with_gemini: Analisi del video con Gemini...
+  model_family_label: Famiglia Modelli
+  assistant_accordion: 🤖 Assistente AI (Post-Elaborazione)
+  assist_provider_label: Provider AI
+  preset_summary: 📝 Riassunto
+  preset_summary_val: Fammi un riassunto della descrizione del video
+  preset_todo: 🔑 Cose da fare
+  preset_todo_val: Estrai le cose da fare e la lista dei task dalla descrizione del
+    video
+  preset_fix: ✏️ Correggi Testo
+  preset_fix_val: 'Correggi la descrizione del video: sistema tutti gli errori di
+    battitura, grammatica e formattazione. Restituisci solo il testo corretto, senza
+    commenti o spiegazioni.'
+  enter_query_label: La tua domanda sulla descrizione del video
+  submit_query_btn: 📤 Invia ad AI
+  ai_response_accordion: 💬 Risposta AI
+  copy_response: 📋 Copia Risposta
+  response_placeholder: In attesa di una domanda...
+  video_analysis_in_progress: ⏳ Analisi frame video in corso...
+  llm_checking_model: ⏳ Verifica stato modello...
+  llm_model_loading: ⏳ In attesa che il modello venga caricato... ({elapsed}s)
+  llm_model_ready: ⏳ Modello pronto. Invio richiesta...
+  llm_model_sending: ⏳ Il modello potrebbe essere in caricamento. Invio richiesta...
+  llm_model_timeout_lmstudio: '❌ Errore: il modello non è presente in LM Studio. Assicurarsi
+    che sia caricato prima di procedere.'
+  llm_waiting_gemini: ⏳ Invio richiesta a Gemini...
+  stop_btn: 🛑 Interrompi
