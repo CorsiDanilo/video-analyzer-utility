@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 2026-07-24
+
+### Added
+- **Dedicated Status Badge & Live Indicators**: Added a prominent status badge (`status_badge`) at the top of the interface displaying real-time color-coded states (`⚪ Status: Waiting`, `🟡 Status: Video processing in progress...`, `🟢 Status: Completed successfully`, `🔴 Status: Processing interrupted`).
+- **Phase Progress Tracking (`gr.Progress`)**: Integrated dynamic phase progress bars to track video scanning, frame extraction, LLM vision processing, and assistant query generation.
+- **Completion Toast Notifications & Audio Chime**: Triggered native popup toast notifications (`gr.Info`) and a 3-tone Web Audio API sound chime upon completion of video processing or assistant queries.
+- **Complete Externalized Localization**: All status messages, progress labels, and completion toasts are fully localized in `settings/locales.yaml` for English and Italian.
+- **Full Field Reset**: Updated the Reset button to reset all UI fields, including returning the status badge to `⚪ Status: Waiting`.
+
 ## [1.3.1] - 2026-07-24
 
 ### Added

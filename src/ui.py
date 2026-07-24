@@ -223,12 +223,13 @@ def preset_query_fix():
     return _("preset_fix_val")
 
 
-def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames, output_format=".txt", output_dir_override=""):
+def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=True)):
     """Process video files based on provider."""
     if not file_paths_text or not file_paths_text.strip():
         yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False), gr.update()
         return
 
+    progress(0.05, desc=_("progress_finding_video"))
     raw_paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
     
     SUPPORTED_EXTS = {".mp4", ".mov", ".mkv", ".avi"}
@@ -258,6 +259,7 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
     total_files = len(expanded_paths)
 
     for index, file_path in enumerate(expanded_paths, 1):
+        progress((index - 0.9) / total_files, desc=_("progress_analyzing_video").format(index=index, total=total_files, filename=os.path.basename(file_path)))
         filename = os.path.basename(file_path)
         header = f"### File {index}/{total_files}: {filename}\n\n"
 
@@ -382,6 +384,7 @@ def reset_fields():
         _("response_placeholder"),   # ai_response
         gr.update(visible=False),    # submit_query_button
         ".txt",                      # output_format
+        _("status_waiting"),         # status_badge
     )
 
 
@@ -410,6 +413,33 @@ custom_css = """
 }
 """
 
+js_head_script = """
+<script>
+function playCompletionSound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.24);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } catch (e) {
+        console.error("Audio chime error:", e);
+    }
+}
+</script>
+"""
+
 def create_ui():
     setup_logging()
     
@@ -417,8 +447,13 @@ def create_ui():
     gemini_models = get_sorted_gemini_models(gemini_api_key)
     has_gemini = len(gemini_models) > 0
 
-    with gr.Blocks(title="Video Analyzer Utility") as demo:
+    def set_status_completed():
+        gr.Info(_("toast_completed_video"))
+        return _("status_completed")
+
+    with gr.Blocks(title="Video Analyzer Utility", head=js_head_script) as demo:
         title_markdown = gr.Markdown(_("title"))
+        status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
 
         with gr.Row():
             file_path_input = gr.Textbox(
@@ -702,9 +737,9 @@ def create_ui():
         )
 
         proc_start = process_btn.click(
-            fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+            fn=lambda: (gr.update(visible=False), gr.update(visible=True), _("status_video_processing")),
             inputs=[],
-            outputs=[process_btn, stop_process_btn]
+            outputs=[process_btn, stop_process_btn, status_badge]
         )
         proc_event = proc_start.then(
             fn=process_video,
@@ -723,14 +758,22 @@ def create_ui():
             outputs=[output_text, save_button, submit_query_button, file_path_input],
         )
         proc_event.then(
+            fn=set_status_completed,
+            inputs=[],
+            outputs=[status_badge]
+        ).then(
             fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
             inputs=[],
             outputs=[process_btn, stop_process_btn]
+        ).then(
+            fn=None,
+            inputs=[],
+            js="() => { playCompletionSound(); }"
         )
         stop_process_btn.click(
-            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False), _("status_interrupted")),
             inputs=[],
-            outputs=[process_btn, stop_process_btn],
+            outputs=[process_btn, stop_process_btn, status_badge],
             cancels=[proc_event]
         )
 
@@ -812,9 +855,9 @@ def create_ui():
 
         # Submit query to AI (streaming)
         query_start = submit_query_button.click(
-            fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+            fn=lambda: (gr.update(visible=False), gr.update(visible=True), _("status_generating_ai")),
             inputs=[],
-            outputs=[submit_query_button, stop_query_btn]
+            outputs=[submit_query_button, stop_query_btn, status_badge]
         )
         query_event = query_start.then(
             fn=query_gemini,
@@ -832,14 +875,22 @@ def create_ui():
             stream_every=0.05,
         )
         query_event.then(
+            fn=set_status_completed,
+            inputs=[],
+            outputs=[status_badge]
+        ).then(
             fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
             inputs=[],
             outputs=[submit_query_button, stop_query_btn]
+        ).then(
+            fn=None,
+            inputs=[],
+            js="() => { playCompletionSound(); }"
         )
         stop_query_btn.click(
-            fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+            fn=lambda: (gr.update(visible=True), gr.update(visible=False), _("status_ai_interrupted")),
             inputs=[],
-            outputs=[submit_query_button, stop_query_btn],
+            outputs=[submit_query_button, stop_query_btn, status_badge],
             cancels=[query_event]
         )
 
@@ -858,6 +909,7 @@ def create_ui():
                 ai_response,
                 submit_query_button,
                 output_format,
+                status_badge,
             ],
         ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 

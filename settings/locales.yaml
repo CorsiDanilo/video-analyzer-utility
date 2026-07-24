@@ -86,6 +86,15 @@ english:
     it before proceeding.'
   llm_waiting_gemini: ⏳ Sending request to Gemini...
   stop_btn: 🛑 Stop
+  status_waiting: '### ⚪ **Status:** *Waiting*'
+  status_video_processing: '### 🟡 **Status:** *Video processing in progress...*'
+  status_generating_ai: '### 🟡 **Status:** *Generating AI response...*'
+  status_completed: '### 🟢 **Status:** *Completed successfully*'
+  status_interrupted: '### 🔴 **Status:** *Processing interrupted*'
+  status_ai_interrupted: '### 🔴 **Status:** *AI request interrupted*'
+  toast_completed_video: 'Video analysis completed successfully!'
+  progress_finding_video: 'Searching for video files...'
+  progress_analyzing_video: 'Analyzing video {index}/{total}: {filename}'
 italian:
   title: 🎥 Utilità di Analisi Video
   file_path_label: Percorso File Video
@@ -176,3 +185,12 @@ italian:
     che sia caricato prima di procedere.'
   llm_waiting_gemini: ⏳ Invio richiesta a Gemini...
   stop_btn: 🛑 Interrompi
+  status_waiting: '### ⚪ **Stato:** *In attesa*'
+  status_video_processing: '### 🟡 **Stato:** *Elaborazione video in corso...*'
+  status_generating_ai: '### 🟡 **Stato:** *Generazione risposta AI...*'
+  status_completed: '### 🟢 **Stato:** *Completato con successo*'
+  status_interrupted: '### 🔴 **Stato:** *Elaborazione interrotta*'
+  status_ai_interrupted: '### 🔴 **Stato:** *Richiesta AI interrotta*'
+  toast_completed_video: 'Analisi video completata con successo!'
+  progress_finding_video: 'Ricerca file video...'
+  progress_analyzing_video: 'Analisi video {index}/{total}: {filename}'

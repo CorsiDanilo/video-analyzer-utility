@@ -10,7 +10,8 @@ This project is a multi-engine video analysis utility designed to describe, anal
   - **Local Vision (Ollama / LM Studio)**: Offline processing by extracting frames using `ffmpeg` with custom intervals and frame limits.
 - 💡 **Timestamped Output Directory & Folder Hierarchy**: Saves outputs into a timestamped folder (`YYYY-MM-DD_HH-MM-SS_transcription`) inside the selected destination (or source folder by default), preserving original subfolder structures. Individual files are named `<filename>_transcription.<ext>`, and a combined session file is also generated.
 - 🤖 **AI Assistant**: Post-process the generated video description to summarize, extract key action items (to-do list), or correct text errors using Gemini, Ollama, or LM Studio.
-- 🌍 **Localization**: Fully localized user interface supporting both **English** and **Italiano** (auto-detected or configured in settings).
+- 📊 **Dedicated Status Badge & Progress Tracking**: Real-time color-coded status badge (`⚪ Waiting`, `🟡 Processing...`, `🟢 Completed`, `🔴 Interrupted`) with phase progress bars and Web Audio sound notifications upon task completion.
+- 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
 - 🖥️ **Modern Web UI**: A clean, responsive Gradio dashboard with integrated system file-browsing.
 - 📋 **One-Click Copy**: Built-in buttons to copy the video description or AI assistant responses directly to your clipboard.
 
