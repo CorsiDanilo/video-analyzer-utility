@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.3.2] - 2026-07-24
 
 ### Added
+- **Configurable Local LLM Timeouts**: Added `lmstudio_timeout` and `ollama_timeout` in `settings/default.yaml` and environment variable overrides (`LMSTUDIO_TIMEOUT`, `OLLAMA_TIMEOUT`) with an increased 300s default timeout to prevent read timeouts during cold starts or heavy model processing.
 - **Dedicated Status Badge & Live Indicators**: Added a prominent status badge (`status_badge`) at the top of the interface displaying real-time color-coded states (`⚪ Status: Waiting`, `🟡 Status: Video processing in progress...`, `🟢 Status: Completed successfully`, `🔴 Status: Processing interrupted`).
 - **Phase Progress Tracking (`gr.Progress`)**: Integrated dynamic phase progress bars to track video scanning, frame extraction, LLM vision processing, and assistant query generation.
 - **Completion Toast Notifications & Audio Chime**: Triggered native popup toast notifications (`gr.Info`) and a 3-tone Web Audio API sound chime upon completion of video processing or assistant queries.

@@ -13,6 +13,8 @@ from .config import (
     GEMINI_API_KEY,
     OLLAMA_ENDPOINT,
     LMSTUDIO_ENDPOINT,
+    LMSTUDIO_TIMEOUT,
+    OLLAMA_TIMEOUT,
     _,
 )
 
@@ -225,7 +227,7 @@ def analyze_frames_ollama(frame_paths: list[str], model_name: str, response_lang
         }
         
         logging.info(f"Sending {len(images_b64)} frames to Ollama ({model_name})...")
-        resp = requests.post(url, json=payload, timeout=300) # Give it 5 mins for multiple frames
+        resp = requests.post(url, json=payload, timeout=OLLAMA_TIMEOUT)
         resp.raise_for_status()
 
         accumulated = ""
@@ -280,7 +282,7 @@ def analyze_frames_lmstudio(frame_paths: list[str], model_name: str, response_la
         }
         
         logging.info(f"Sending {len(frame_paths)} frames to LM Studio ({model_name})...")
-        resp = requests.post(url, json=payload, timeout=300)
+        resp = requests.post(url, json=payload, timeout=LMSTUDIO_TIMEOUT)
         resp.raise_for_status()
         
         data = resp.json()

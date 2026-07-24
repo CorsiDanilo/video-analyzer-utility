@@ -1,3 +1,6 @@
 ui_language: "english" # italian | english
 ollama_endpoint: "http://127.0.0.1:11434"
 lmstudio_endpoint: "http://127.0.0.1:1234"
+lmstudio_timeout: 300
+ollama_timeout: 300
+

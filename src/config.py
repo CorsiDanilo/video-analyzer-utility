@@ -52,10 +52,42 @@ def get_lmstudio_endpoint():
         return env_val
     return "http://127.0.0.1:1234"
 
-# API Keys and Endpoints
+def get_lmstudio_timeout():
+    config = load_default_config()
+    if "lmstudio_timeout" in config:
+        try:
+            return int(config["lmstudio_timeout"])
+        except (ValueError, TypeError):
+            pass
+    env_val = os.environ.get("LMSTUDIO_TIMEOUT") or os.environ.get("LMSTUDIO_READ_TIMEOUT")
+    if env_val:
+        try:
+            return int(env_val)
+        except ValueError:
+            pass
+    return 300
+
+def get_ollama_timeout():
+    config = load_default_config()
+    if "ollama_timeout" in config:
+        try:
+            return int(config["ollama_timeout"])
+        except (ValueError, TypeError):
+            pass
+    env_val = os.environ.get("OLLAMA_TIMEOUT") or os.environ.get("OLLAMA_READ_TIMEOUT")
+    if env_val:
+        try:
+            return int(env_val)
+        except ValueError:
+            pass
+    return 300
+
+# API Keys, Endpoints and Timeouts
 GEMINI_API_KEY = get_gemini_api_key()
 OLLAMA_ENDPOINT = get_ollama_endpoint()
 LMSTUDIO_ENDPOINT = get_lmstudio_endpoint()
+LMSTUDIO_TIMEOUT = get_lmstudio_timeout()
+OLLAMA_TIMEOUT = get_ollama_timeout()
 
 # Default models
 DEFAULT_OLLAMA_MODEL = "llava:latest"

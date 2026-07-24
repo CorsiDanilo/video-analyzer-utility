@@ -43,6 +43,8 @@ This app can analyze the videos or interact with descriptions using one of these
   - Load your desired model.
   - In the UI, choose **LM Studio**, click **Refresh Models**, and select your model.
 
+> **Tip**: Custom timeouts for local AI servers can be set in `settings/default.yaml` (`lmstudio_timeout`, `ollama_timeout`) or via environment variables (`LMSTUDIO_TIMEOUT`, `OLLAMA_TIMEOUT`). Default is 300s.
+
 ## 📦 Installation
 
 ### Step 1: Clone the repository
