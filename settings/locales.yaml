@@ -31,6 +31,10 @@ english:
   copy_success: Copied to clipboard!
   no_models_found: No models found
   dialog_select_title: Select Video Files
+  dialog_select_output_folder_title: Select output folder
+  output_dir_label: 'Output folder (default: same as input)'
+  output_dir_placeholder: Leave empty to use the input file's directory
+  choose_output_dir_btn: 📁 Choose output folder
   dialog_filter_video: Video Files
   dialog_filter_all: All Files
   dialog_save_title: Save Transcription
@@ -115,6 +119,10 @@ italian:
   copy_success: Copiato negli appunti!
   no_models_found: Nessun modello trovato
   dialog_select_title: Seleziona File Video
+  dialog_select_output_folder_title: Seleziona cartella di destinazione
+  output_dir_label: 'Cartella di destinazione (default: stessa cartella dei file)'
+  output_dir_placeholder: Lascia vuoto per salvare nella cartella dei file selezionati
+  choose_output_dir_btn: 📁 Scegli cartella di destinazione
   dialog_filter_video: File Video
   dialog_filter_all: Tutti i File
   dialog_save_title: Salva Trascrizione

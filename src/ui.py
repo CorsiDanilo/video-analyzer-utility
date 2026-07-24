@@ -93,6 +93,79 @@ def browse_local_folders(existing_paths=""):
         gr.Error(_("dialog_err_select").format(str(e)))
         return gr.update()
 
+
+def browse_output_folder(file_paths_text="", current_override=""):
+    """Open a folder dialog to choose the output directory.
+    Default points to the common root of the selected files."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        from pathlib import Path
+
+        default_dir = ""
+        if current_override and os.path.isdir(current_override):
+            default_dir = current_override
+        elif file_paths_text and file_paths_text.strip():
+            paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
+            if paths:
+                try:
+                    common = os.path.commonpath(paths)
+                    default_dir = common if os.path.isdir(common) else str(Path(common).parent)
+                except ValueError:
+                    default_dir = str(Path(paths[0]).parent)
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        folder = filedialog.askdirectory(
+            title=_("dialog_select_output_folder_title"),
+            initialdir=default_dir or os.path.expanduser("~"),
+            parent=root,
+        )
+        root.destroy()
+
+        if folder:
+            return folder
+        return gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting output folder: {e}")
+        return gr.update()
+
+
+def _compute_output_dir(expanded_paths, output_dir_override=""):
+    """Compute the timestamped output directory and common root.
+
+    Returns:
+        (common_root: Path, output_dir: Path, timestamp_str: str)
+    """
+    from pathlib import Path
+    import datetime
+
+    timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    folder_name = f"{timestamp_str}_transcription"
+
+    if output_dir_override and os.path.isdir(output_dir_override):
+        base = Path(output_dir_override)
+    else:
+        try:
+            common = os.path.commonpath(expanded_paths)
+            base = Path(common) if os.path.isdir(common) else Path(common).parent
+        except ValueError:
+            base = Path(expanded_paths[0]).parent
+
+    output_dir = base / folder_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        common_root = Path(os.path.commonpath(expanded_paths))
+        if not common_root.is_dir():
+            common_root = common_root.parent
+    except ValueError:
+        common_root = Path(expanded_paths[0]).parent
+
+    return common_root, output_dir, timestamp_str
+
 def save_extracted_text(extracted_text, file_paths_text="", output_format=".txt"):
     """Open a native Save As dialog to save the extracted text."""
     if not extracted_text or not extracted_text.strip():
@@ -110,7 +183,7 @@ def save_extracted_text(extracted_text, file_paths_text="", output_format=".txt"
             first_file = file_paths_text.strip().split("\n")[0].strip()
             import os
             video_name = os.path.splitext(os.path.basename(first_file))[0]
-            initialfile = f"{video_name}_description{output_format}"
+            initialfile = f"{video_name}_transcription{output_format}"
         else:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             initialfile = f"video_analysis_{timestamp}{output_format}"
@@ -150,7 +223,7 @@ def preset_query_fix():
     return _("preset_fix_val")
 
 
-def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames, output_format=".txt"):
+def process_video(file_paths_text, provider, response_language, gemini_model, ollama_model, lmstudio_model, frame_interval, max_frames, output_format=".txt", output_dir_override=""):
     """Process video files based on provider."""
     if not file_paths_text or not file_paths_text.strip():
         yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False), gr.update()
@@ -175,6 +248,11 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
     if not expanded_paths:
         yield _("proc_no_files"), gr.update(visible=False), gr.update(visible=False), file_paths_text
         return
+
+    # Compute output directory with timestamp
+    import re
+    from pathlib import Path
+    common_root, output_dir, timestamp_str = _compute_output_dir(expanded_paths, output_dir_override or "")
 
     session_text = ""
     total_files = len(expanded_paths)
@@ -252,18 +330,22 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
                         result = analyze_frames_lmstudio(frames, model_name, response_language, output_format)
                     cleanup_frames()
 
-            # Save individual description text file
+            # Save individual transcription file preserving folder hierarchy
             if result and not any(result.startswith(prefix) for prefix in ["[Error", "[No response", "[Gemini API Error", "[Ollama Vision Error", "[LM Studio Vision Error"]):
                 try:
-                    from pathlib import Path
-                    video_path_obj = Path(file_path)
-                    video_name = video_path_obj.stem
-                    out_file = video_path_obj.with_name(f"{video_name}_description{output_format}")
+                    source = Path(file_path)
+                    try:
+                        rel = source.relative_to(common_root)
+                    except ValueError:
+                        rel = Path(source.name)
+                    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", source.stem).strip("._") or "video"
+                    out_file = output_dir / rel.parent / f"{safe_stem}_transcription{output_format}"
+                    out_file.parent.mkdir(parents=True, exist_ok=True)
                     with open(out_file, "w", encoding="utf-8") as f:
                         f.write(result.strip())
-                    logging.info(f"Auto-saved individual analysis to {out_file}")
+                    logging.info(f"Saved transcription to {out_file}")
                 except Exception as e:
-                    logging.error(f"Error auto-saving individual analysis for {file_path}: {e}", exc_info=True)
+                    logging.error(f"Error saving transcription for {file_path}: {e}", exc_info=True)
 
         except Exception as e:
             logging.error(f"Error processing {file_path}: {e}", exc_info=True)
@@ -275,6 +357,17 @@ def process_video(file_paths_text, provider, response_language, gemini_model, ol
     session_text = session_text.strip()
     if session_text.endswith("---"):
         session_text = session_text[:-3].strip()
+
+    # Save combined transcription file
+    if expanded_paths:
+        try:
+            combined_file = output_dir / f"{timestamp_str}_transcription{output_format}"
+            logging.info(f"Saving combined transcription to {combined_file}...")
+            with open(combined_file, "w", encoding="utf-8") as f:
+                f.write(session_text)
+            logging.info("Combined transcription saved successfully.")
+        except Exception as e:
+            logging.error(f"Error saving combined transcription: {e}", exc_info=True)
 
     yield session_text, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
 
@@ -336,6 +429,16 @@ def create_ui():
         with gr.Row():
             browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
             browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
+
+        with gr.Row():
+            output_dir_display = gr.Textbox(
+                label=_("output_dir_label"),
+                placeholder=_("output_dir_placeholder"),
+                lines=1,
+                interactive=True,
+            )
+        with gr.Row():
+            choose_output_dir_btn = gr.Button(_("choose_output_dir_btn"), variant="secondary")
 
         config_accordion = gr.Accordion(label=_("config_accordion"), open=True)
         with config_accordion:
@@ -615,6 +718,7 @@ def create_ui():
                 frame_interval,
                 max_frames,
                 output_format,
+                output_dir_display,
             ],
             outputs=[output_text, save_button, submit_query_button, file_path_input],
         )
@@ -631,6 +735,12 @@ def create_ui():
         )
 
         save_button.click(fn=save_extracted_text, inputs=[output_text, file_path_input, output_format], outputs=[])
+
+        choose_output_dir_btn.click(
+            fn=browse_output_folder,
+            inputs=[file_path_input, output_dir_display],
+            outputs=[output_dir_display],
+        )
 
         js_copy_text = "(text) => { navigator.clipboard.writeText(text); }"
         copy_text_button.click(
